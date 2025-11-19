@@ -4,8 +4,8 @@ set -e
 APP_DIR="/opt/tg_multi_bot"
 SERVICE_NAME="tg_multi_bot"
 SCRIPT_NAME="host_bot.py"
-SCRIPT_URL="https://raw.githubusercontent.com/zam1238/TG_Talk/refs/heads/main/host_bot.py"
-DATABASE_URL="https://raw.githubusercontent.com/zam1238/TG_Talk/refs/heads/main/database.py"
+SCRIPT_URL="https://raw.githubusercontent.com/zam1238/TG_Talk_Revise/refs/heads/main/host_bot.py?token=GHSAT0AAAAAADPTJW6V7F6N66XWKEN3UUTU2I52GTA"
+DATABASE_URL="https://raw.githubusercontent.com/zam1238/TG_Talk_Revise/refs/heads/main/database.py?token=GHSAT0AAAAAADPTJW6U7JAMIFMTRT7LVOC62I52HOQ"
 
 function check_and_install() {
   PKG=$1
