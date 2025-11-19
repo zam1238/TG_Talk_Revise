@@ -841,6 +841,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE, own
                             "--------------------------\n"
                             "- 业务频道 @xiaobuKKK \n"
                             "* 现在bot广告增多,方便快捷的托管中心,带有验证功能防范广告骚扰。\n\n"
+                            "*  /start 不会使用此平台，可以直接在此消息后直接发送消息询问。\n\n"
                             "* 多机器人接入：只需提供 Token，即可快速启用。\n\n"
                             "* 两种模式：\n"
                             "  ▸ 私聊模式 —— 用户消息直接转发到bot。\n"
