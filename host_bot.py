@@ -434,6 +434,7 @@ async def subbot_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "- 私人账户 https://t.me/zam_CN (有可能看不到消息，要是加提前说) \n"
             "---------------------------\n\n"
             "请直接输入消息，主人收到就会回复你"
+            disable_web_page_preview=True  # 禁用链接预览
         )
     else:
         # 生成验证码并发送
