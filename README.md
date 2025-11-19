@@ -2,6 +2,7 @@
 ```bash
 bash <(curl -Ls https://raw.githubusercontent.com/zam1238/TG_Talk_Revise/refs/heads/main/setup.sh)
 ```
+> 此项目为私用
 > 一键部署，轻松管理多个 Telegram 客服机器人
 > 项目运营中心
 - 如自己不想部署，可直接使用本项目快捷服务 [双向托管机器人](https://t.me/zam_Two_wayrobot)
