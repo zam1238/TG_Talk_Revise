@@ -839,14 +839,15 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE, own
                         await message.reply_text(
                             "👋 欢迎回来！\n\n"
                             "--------------------------\n"
-                            "✨ 核心功能\n"
+                            "- 业务频道 @xiaobuKKK \n"
+                            "* 现在bot广告增多,方便快捷的托管中心,带有验证功能防范广告骚扰。\n\n"
                             "* 多机器人接入：只需提供 Token，即可快速启用。\n\n"
                             "* 两种模式：\n"
                             "  ▸ 私聊模式 —— 用户消息直接转发到bot。\n"
                             "  ▸ 话题模式 —— 每个用户自动建立独立话题，消息更清晰。\n\n"
                             "* 智能映射：自动维护消息与话题的对应关系。\n"
                             "---------------------------\n"
-                            "- 客服bot托管中心 @tg_multis_bot \n"
+                            "- 客服bot托管中心 @zam_Two_wayrobot \n"
                             "---------------------------\n\n"
                             "请直接输入消息，主人收到就会回复你"
                         )
