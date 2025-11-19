@@ -229,5 +229,6 @@ MIT License - 自由使用，保留版权声明
 - **Python版本**: 3.11+
 
 ---
-
+**注：我是私用，加了自己的广告**
+**尊重原作者的辛苦付出贴出原作者项目地址 https://github.com/jyucoeng/TG_Talk**
 **Made with ❤️ for Telegram Bot Lovers**
