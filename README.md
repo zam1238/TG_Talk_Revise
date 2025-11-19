@@ -4,7 +4,7 @@ bash <(curl -Ls https://raw.githubusercontent.com/zam1238/TG_Talk_Revise/refs/he
 ```
 > 一键部署，轻松管理多个 Telegram 客服机器人
 > 项目运营中心
-- 如自己不想部署，可直接使用本项目快捷服务 [双向托管机器人](https://t.me/tg_multis_bot)
+- 如自己不想部署，可直接使用本项目快捷服务 [双向托管机器人](https://t.me/zam_Two_wayrobot)
   
 ## 📖 简介
 
@@ -230,5 +230,5 @@ MIT License - 自由使用，保留版权声明
 
 ---
 **注：我是私用，加了自己的广告**
-**尊重原作者的辛苦付出贴出原作者项目地址 https://github.com/jyucoeng/TG_Talk**
+**[尊重原作者的辛苦付出贴出原作者项目地址](https://github.com/jyucoeng/TG_Talk)**
 **Made with ❤️ for Telegram Bot Lovers**
