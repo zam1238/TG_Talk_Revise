@@ -149,7 +149,16 @@ def init_database():
             )
         ''')
         
-        # 5. 创建索引加速查询（独立语句）
+        # 5. 全局设置表（管理员设置）
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS global_settings (
+                key TEXT PRIMARY KEY,
+                value TEXT,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        
+        # 6. 创建索引加速查询（独立语句）
         cursor.execute('''
             CREATE INDEX IF NOT EXISTS idx_verified_users_bot 
             ON verified_users(bot_username, user_id)
@@ -959,6 +968,91 @@ def cleanup_old_pending_verifications(hours: int = 24) -> int:
     except Exception as e:
         logger.error(f"❌ 清理待验证记录失败: {e}")
         return 0
+
+
+
+# ================== 全局设置管理 ==================
+
+def get_global_setting(key: str) -> Optional[str]:
+    """获取全局设置值"""
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT value FROM global_settings 
+            WHERE key = ?
+        ''', (key,))
+        
+        row = cursor.fetchone()
+        conn.close()
+        
+        return row['value'] if row else None
+    except Exception as e:
+        logger.error(f"❌ 查询全局设置失败: {e}")
+        return None
+
+
+def set_global_setting(key: str, value: str) -> bool:
+    """设置全局设置值"""
+    try:
+        with db_lock:
+            conn = get_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                INSERT OR REPLACE INTO global_settings 
+                (key, value, updated_at)
+                VALUES (?, ?, CURRENT_TIMESTAMP)
+            ''', (key, value))
+            
+            conn.commit()
+            conn.close()
+            logger.info(f"✅ 设置全局配置: {key}")
+            return True
+    except Exception as e:
+        logger.error(f"❌ 设置全局配置失败: {e}")
+        return False
+
+
+def delete_global_setting(key: str) -> bool:
+    """删除全局设置"""
+    try:
+        with db_lock:
+            conn = get_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                DELETE FROM global_settings 
+                WHERE key = ?
+            ''', (key,))
+            
+            conn.commit()
+            affected = cursor.rowcount
+            conn.close()
+            
+            if affected > 0:
+                logger.info(f"✅ 删除全局配置: {key}")
+                return True
+            return False
+    except Exception as e:
+        logger.error(f"❌ 删除全局配置失败: {e}")
+        return False
+
+
+def get_global_welcome() -> Optional[str]:
+    """获取管理员设置的全局欢迎语"""
+    return get_global_setting('global_welcome_msg')
+
+
+def set_global_welcome(welcome_msg: str) -> bool:
+    """设置管理员的全局欢迎语"""
+    return set_global_setting('global_welcome_msg', welcome_msg)
+
+
+def delete_global_welcome() -> bool:
+    """删除管理员的全局欢迎语"""
+    return delete_global_setting('global_welcome_msg')
 
 
 # ================== 启动时初始化 ==================
