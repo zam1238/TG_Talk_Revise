@@ -6,7 +6,7 @@ import random
 from datetime import datetime
 from functools import partial
 from telegram import (
-    Update, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand
+    Update, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand, BotCommandScopeChat
 )
 from telegram.ext import (
     Application, CommandHandler, MessageHandler, CallbackQueryHandler,
@@ -376,6 +376,49 @@ def get_bot_cfg(owner_id, bot_username: str):
             return b
     return None
 
+# 系统默认欢迎语模板
+DEFAULT_WELCOME_MSG = (
+    "👋 欢迎回来！\n\n"
+    "--------------------------\n"
+    "✨ 业务频道 @xiaobuKKK\n"
+    "* 现在bot广告增多,方便快捷的托管中心,带有验证功能防范广告骚扰。\n\n"
+    "* 多机器人接入：只需提供 Token，即可快速启用。\n\n"
+    "* 两种模式：\n"
+    "  ▸ 私聊模式 —— 用户消息直接转发到bot。\n"
+    "  ▸ 话题模式 —— 每个用户自动建立独立话题，消息更清晰。\n\n"
+    "* 智能映射：自动维护消息与话题的对应关系。\n"
+    "---------------------------\n"
+    "- 客服bot托管中心 @zam_Two_wayrobot  \n"
+    "---------------------------\n\n"
+    "请直接输入消息，主人收到就会回复你"
+)
+
+def get_welcome_message(bot_username: str) -> str:
+    """
+    获取欢迎语（按优先级）
+    1. 用户自定义欢迎语（bot配置中的welcome_msg）
+    2. 管理员全局欢迎语（global_settings表）
+    3. 系统默认欢迎语（DEFAULT_WELCOME_MSG常量）
+    
+    Args:
+        bot_username: 机器人用户名
+    
+    Returns:
+        欢迎语文本
+    """
+    # 优先级1：用户自定义欢迎语
+    bot_info = db.get_bot(bot_username)
+    if bot_info and bot_info.get('welcome_msg'):
+        return bot_info['welcome_msg']
+    
+    # 优先级2：管理员全局欢迎语
+    global_welcome = db.get_global_welcome()
+    if global_welcome:
+        return global_welcome
+    
+    # 优先级3：系统默认欢迎语
+    return DEFAULT_WELCOME_MSG
+
 # ================== 宿主机 /start 菜单 ==================
 def is_admin(user_id: int) -> bool:
     """检查用户是否为管理员"""
@@ -390,6 +433,7 @@ def manager_main_menu(user_id: int):
     
     # 管理员专属菜单
     if is_admin(user_id):
+        keyboard.append([InlineKeyboardButton("📝 全局欢迎语", callback_data="admin_global_welcome")])
         keyboard.append([InlineKeyboardButton("👥 用户清单", callback_data="admin_users")])
         keyboard.append([InlineKeyboardButton("📢 广播通知", callback_data="admin_broadcast")])
         keyboard.append([InlineKeyboardButton("🗑️ 清理失效Bot", callback_data="admin_clean_invalid")])
@@ -414,27 +458,9 @@ async def subbot_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # 如果用户已验证，显示欢迎信息
     if is_verified(bot_username, user_id):
-        await update.message.reply_text(
-            "👋 欢迎回来！\n\n"
-            "--------------------------\n"
-            "✨ 在售业务\n"
-            "* 打个广告大兄弟\n\n"
-            "* Bybit 账户\n"
-            "  ▸ 💳 成品号（未开卡）：120R  （17U）\n"
-            "  ▸ 💳 成品号（已开卡）：130R  （18U）\n\n"
-            "  ▸ 💳 Ether.fi Cash Card 23U\n\n"
-            "  ▸ 💬 TG 实名认证：10U/个\n\n"
-            "  ▸ 🆓 TG 号：15R/个(出邮箱)\n\n"
-            "  ▸ 🆓 TG 号：10R/个(无邮箱)\n\n"
-            "  ▸ TG全部满月,24小时加10个以内群或好友封了赔号\n\n"
-            "* giffgaff卡 （带3个333或3个222的3英镑一个，4个3333的5英镑,普通款10R一张）邮费自付6R，转esim没有邮费\n"
-            "---------------------------\n"
-            "- 频道地址 https://t.me/xiaobuKKK \n"
-            "- 私人秘书 https://t.me/zamzgbot \n"
-            "- 私人账户 https://t.me/zam_CN (有可能看不到消息，要是加提前说) \n"
-            "---------------------------\n\n"
-            "请直接输入消息，主人收到就会回复你"
-        )
+        # 使用优先级欢迎语：用户自定义 > 管理员全局 > 系统默认
+        welcome_msg = get_welcome_message(bot_username)
+        await update.message.reply_text(welcome_msg)
     else:
         # 生成验证码并发送
         captcha_data = generate_captcha()
@@ -837,22 +863,25 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE, own
                         db.remove_pending_verification(bot_username, user_id)
                         pending_verifications.pop(verification_key, None)
                         
-                        await message.reply_text(
-                            "👋 欢迎回来！\n\n"
-                            "--------------------------\n"
-                            "- 业务频道 @xiaobuKKK \n"
-                            "* 现在bot广告增多,方便快捷的托管中心,带有验证功能防范广告骚扰。\n\n"
-                            "*  /start 不会使用此平台，可以直接在此消息后直接发送消息询问。\n\n"
-                            "* 多机器人接入：只需提供 Token，即可快速启用。\n\n"
-                            "* 两种模式：\n"
-                            "  ▸ 私聊模式 —— 用户消息直接转发到bot。\n"
-                            "  ▸ 话题模式 —— 每个用户自动建立独立话题，消息更清晰。\n\n"
-                            "* 智能映射：自动维护消息与话题的对应关系。\n"
-                            "---------------------------\n"
-                            "- 客服bot托管中心 @zam_Two_wayrobot \n"
-                            "---------------------------\n\n"
-                            "请直接输入消息，主人收到就会回复你"
-                        )
+                        # 🔧 为 owner 设置命令菜单（如果之前没设置成功）
+                        if user_id == owner_id:
+                            try:
+                                commands = [
+                                    BotCommand("start", "开始使用"),
+                                    BotCommand("id", "查看用户"),
+                                    BotCommand("b", "拉黑用户"),
+                                    BotCommand("ub", "解除拉黑"),
+                                    BotCommand("bl", "查看黑名单"),
+                                    BotCommand("uv", "取消用户验证")
+                                ]
+                                await context.bot.set_my_commands(commands, scope=BotCommandScopeChat(chat_id=owner_id))
+                                logger.info(f"✅ 已为 @{bot_username} 的拥有者（ID: {owner_id}）设置专属命令菜单")
+                            except Exception as cmd_err:
+                                logger.warning(f"设置命令菜单失败: {cmd_err}")
+                        
+                        # 使用优先级欢迎语：用户自定义 > 管理员全局 > 系统默认
+                        welcome_msg = get_welcome_message(bot_username)
+                        await message.reply_text(welcome_msg)
                         
                         # 通知Bot的主人（owner）
                         now = datetime.now().strftime("%Y-%m-%d %H:%M")
@@ -1332,6 +1361,78 @@ async def token_listener(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         return
     
+    # ----- 等待设置欢迎语 -----
+    action = context.user_data.get("action")
+    
+    # 用户设置机器人欢迎语
+    if action == "set_welcome" and update.message and update.message.text:
+        bot_username = context.user_data.get("bot_username")
+        owner_id = str(update.message.chat.id)
+        welcome_text = update.message.text.strip()
+        
+        # 验证权限
+        bots = bots_data.get(owner_id, {}).get("bots", [])
+        target_bot = next((b for b in bots if b["bot_username"] == bot_username), None)
+        if not target_bot:
+            await update.message.reply_text("⚠️ 找不到这个 Bot")
+            context.user_data.pop("action", None)
+            context.user_data.pop("bot_username", None)
+            return
+        
+        # 保存欢迎语到数据库
+        if db.update_bot_welcome(bot_username, welcome_text):
+            # 更新内存中的数据
+            target_bot["welcome_msg"] = welcome_text
+            load_bots()
+            
+            await update.message.reply_text(
+                f"✅ 已为 @{bot_username} 设置自定义欢迎语\n\n"
+                f"━━━━━━━━━━━━━━\n"
+                f"{welcome_text[:100]}{'...' if len(welcome_text) > 100 else ''}\n"
+                f"━━━━━━━━━━━━━━\n\n"
+                f"💡 用户下次发送 /start 时将看到此欢迎语"
+            )
+            
+            # 通知管理员
+            now = datetime.now().strftime("%Y-%m-%d %H:%M")
+            user_username = update.message.from_user.username
+            user_display = f"@{user_username}" if user_username else f"用户ID: {owner_id}"
+            await send_admin_log(f"✏️ {user_display} (ID: <code>{owner_id}</code>) 为 @{bot_username} 设置了自定义欢迎语 · {now}")
+        else:
+            await update.message.reply_text("❌ 设置失败，请稍后重试")
+        
+        context.user_data.pop("action", None)
+        context.user_data.pop("bot_username", None)
+        return
+    
+    # 管理员设置全局欢迎语
+    if action == "set_global_welcome" and update.message and update.message.text:
+        if not is_admin(update.message.from_user.id):
+            await update.message.reply_text("⚠️ 无权限操作")
+            context.user_data.pop("action", None)
+            return
+        
+        welcome_text = update.message.text.strip()
+        
+        # 保存全局欢迎语
+        if db.set_global_welcome(welcome_text):
+            await update.message.reply_text(
+                f"✅ 已设置全局欢迎语\n\n"
+                f"━━━━━━━━━━━━━━\n"
+                f"{welcome_text[:200]}{'...' if len(welcome_text) > 200 else ''}\n"
+                f"━━━━━━━━━━━━━━\n\n"
+                f"💡 所有未自定义欢迎语的机器人将使用此欢迎语"
+            )
+            
+            # 通知管理员
+            now = datetime.now().strftime("%Y-%m-%d %H:%M")
+            await send_admin_log(f"📝 管理员设置了全局欢迎语 · {now}")
+        else:
+            await update.message.reply_text("❌ 设置失败，请稍后重试")
+        
+        context.user_data.pop("action", None)
+        return
+    
     # ----- 等待设置话题群ID -----
     pending_bot_forum = context.user_data.get("waiting_forum_for")
     if pending_bot_forum and update.message and update.message.text:
@@ -1439,20 +1540,29 @@ async def token_listener(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await new_app.initialize()
     await new_app.start()
     
-    # 设置子机器人的命令菜单
+    # 设置子机器人的命令菜单（仅对绑定用户显示）
     try:
-        commands = [
-            BotCommand("start", "开始使用"),
-            BotCommand("id", "查看用户"),
-            BotCommand("b", "拉黑用户"),
-            BotCommand("ub", "解除拉黑"),
-            BotCommand("bl", "查看黑名单"),
-            BotCommand("uv", "取消用户验证")
-        ]
-        await new_app.bot.set_my_commands(commands)
-        logger.info(f"已为 @{bot_username} 设置命令菜单")
+        # 先清除所有默认命令（全局）
+        await new_app.bot.delete_my_commands()
+        logger.info(f"✅ 已清除 @{bot_username} 的全局命令菜单")
+        
+        # 尝试为 owner 设置命令菜单（如果bot和owner还没对话会失败，这是正常的）
+        try:
+            commands = [
+                BotCommand("start", "开始使用"),
+                BotCommand("id", "查看用户"),
+                BotCommand("b", "拉黑用户"),
+                BotCommand("ub", "解除拉黑"),
+                BotCommand("bl", "查看黑名单"),
+                BotCommand("uv", "取消用户验证")
+            ]
+            await new_app.bot.set_my_commands(commands, scope=BotCommandScopeChat(chat_id=owner_id))
+            logger.info(f"✅ 已为 @{bot_username} 的拥有者（ID: {owner_id}）设置专属命令菜单")
+        except Exception as scope_err:
+            # Bot还没和owner对话过，等用户首次/start后会自动设置
+            logger.info(f"ℹ️  @{bot_username} 暂未与拥有者建立对话，将在首次对话时设置命令菜单")
     except Exception as e:
-        logger.error(f"设置命令菜单失败: {e}")
+        logger.error(f"❌ 设置命令菜单失败: {e}")
     
     await new_app.updater.start_polling()
 
@@ -1495,6 +1605,12 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not is_admin(query.from_user.id):
             await query.answer("⚠️ 仅管理员可用", show_alert=True)
             return
+        
+        # ⏳ 立即显示加载消息（让用户看到反馈）
+        try:
+            await query.message.edit_text("⏳ 正在加载用户列表，请稍候...")
+        except:
+            pass
         
         # 解析页码
         page = 0
@@ -1904,6 +2020,8 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
         keyboard = [
+            [InlineKeyboardButton("✏️ 设置欢迎语", callback_data=f"set_welcome_{bot_username}")],
+            [InlineKeyboardButton("👁️ 预览欢迎语", callback_data=f"preview_welcome_{bot_username}")],
             [InlineKeyboardButton("🛠 话题群ID", callback_data=f"setforum_{bot_username}")],
             [InlineKeyboardButton("🔁 私聊模式", callback_data=f"mode_direct_{bot_username}")],
             [InlineKeyboardButton("🔁 话题模式", callback_data=f"mode_forum_{bot_username}")],
@@ -1966,6 +2084,164 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"• 请在群组设置页面获取群ID\n"
             f"• 话题模式下 500 开头的话题ID无效"
         )
+        return
+
+    # ================== 欢迎语管理 ==================
+    
+    # 预览欢迎语
+    if data.startswith("preview_welcome_"):
+        bot_username = data.split("_", 2)[2]
+        owner_id = str(query.from_user.id)
+        
+        # 验证权限
+        bots = bots_data.get(owner_id, {}).get("bots", [])
+        target_bot = next((b for b in bots if b["bot_username"] == bot_username), None)
+        if not target_bot:
+            await reply_and_auto_delete(query.message, "⚠️ 找不到这个 Bot。", delay=10)
+            return
+        
+        # 获取当前生效的欢迎语
+        welcome_msg = get_welcome_message(bot_username)
+        
+        # 判断来源
+        bot_info = db.get_bot(bot_username)
+        if bot_info and bot_info.get('welcome_msg'):
+            source = "✏️ 自定义欢迎语"
+        elif db.get_global_welcome():
+            source = "🌐 管理员全局欢迎语"
+        else:
+            source = "📝 系统默认欢迎语"
+        
+        preview_text = (
+            f"👁️ 欢迎语预览 (@{bot_username})\n\n"
+            f"━━━━━━━━━━━━━━\n"
+            f"{source}\n"
+            f"━━━━━━━━━━━━━━\n\n"
+            f"{welcome_msg}\n\n"
+            f"━━━━━━━━━━━━━━"
+        )
+        
+        keyboard = [
+            [InlineKeyboardButton("✏️ 修改欢迎语", callback_data=f"set_welcome_{bot_username}")],
+            [InlineKeyboardButton("🔙 返回", callback_data=f"info_{bot_username}")]
+        ]
+        
+        await query.message.edit_text(preview_text, reply_markup=InlineKeyboardMarkup(keyboard))
+        return
+    
+    # 设置欢迎语
+    if data.startswith("set_welcome_"):
+        bot_username = data.split("_", 2)[2]
+        owner_id = str(query.from_user.id)
+        
+        # 验证权限
+        bots = bots_data.get(owner_id, {}).get("bots", [])
+        target_bot = next((b for b in bots if b["bot_username"] == bot_username), None)
+        if not target_bot:
+            await reply_and_auto_delete(query.message, "⚠️ 找不到这个 Bot。", delay=10)
+            return
+        
+        # 设置状态，等待用户输入
+        context.user_data["action"] = "set_welcome"
+        context.user_data["bot_username"] = bot_username
+        
+        # 获取当前欢迎语
+        bot_info = db.get_bot(bot_username)
+        current_welcome = bot_info.get('welcome_msg', '') if bot_info else ''
+        
+        tip_text = (
+            f"✏️ 设置欢迎语 (@{bot_username})\n\n"
+            f"请输入新的欢迎语内容：\n\n"
+            f"💡 提示：\n"
+            f"• 支持多行文本\n"
+            f"• 可以使用 Emoji 表情\n"
+            f"• 发送 /cancel 取消设置\n"
+            f"• 发送 /clear 清除自定义欢迎语（恢复为全局/默认）\n\n"
+        )
+        
+        if current_welcome:
+            tip_text += f"━━━━━━━━━━━━━━\n当前自定义欢迎语：\n{current_welcome[:100]}{'...' if len(current_welcome) > 100 else ''}"
+        
+        await query.message.edit_text(tip_text)
+        return
+    
+    # 管理员全局欢迎语
+    if data == "admin_global_welcome":
+        if not is_admin(query.from_user.id):
+            await reply_and_auto_delete(query.message, "⚠️ 无权限访问", delay=5)
+            return
+        
+        global_welcome = db.get_global_welcome()
+        
+        if global_welcome:
+            text = (
+                f"📝 全局欢迎语设置\n\n"
+                f"━━━━━━━━━━━━━━\n"
+                f"当前全局欢迎语：\n\n"
+                f"{global_welcome[:200]}{'...' if len(global_welcome) > 200 else ''}\n"
+                f"━━━━━━━━━━━━━━\n\n"
+                f"💡 说明：全局欢迎语会应用于所有未自定义欢迎语的机器人"
+            )
+            keyboard = [
+                [InlineKeyboardButton("✏️ 修改", callback_data="admin_edit_global_welcome")],
+                [InlineKeyboardButton("🗑️ 清除", callback_data="admin_clear_global_welcome")],
+                [InlineKeyboardButton("🔙 返回", callback_data="back_home")]
+            ]
+        else:
+            text = (
+                f"📝 全局欢迎语设置\n\n"
+                f"⚠️ 尚未设置全局欢迎语\n\n"
+                f"💡 说明：设置后，所有未自定义欢迎语的机器人将使用全局欢迎语"
+            )
+            keyboard = [
+                [InlineKeyboardButton("➕ 设置全局欢迎语", callback_data="admin_edit_global_welcome")],
+                [InlineKeyboardButton("🔙 返回", callback_data="back_home")]
+            ]
+        
+        await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
+        return
+    
+    # 管理员编辑全局欢迎语
+    if data == "admin_edit_global_welcome":
+        if not is_admin(query.from_user.id):
+            await reply_and_auto_delete(query.message, "⚠️ 无权限访问", delay=5)
+            return
+        
+        context.user_data["action"] = "set_global_welcome"
+        
+        global_welcome = db.get_global_welcome()
+        tip_text = (
+            f"✏️ 设置全局欢迎语\n\n"
+            f"请输入全局欢迎语内容：\n\n"
+            f"💡 提示：\n"
+            f"• 支持多行文本\n"
+            f"• 可以使用 Emoji 表情\n"
+            f"• 发送 /cancel 取消设置\n"
+            f"• 全局欢迎语仅对未自定义的机器人生效\n\n"
+        )
+        
+        if global_welcome:
+            tip_text += f"━━━━━━━━━━━━━━\n当前全局欢迎语：\n{global_welcome[:100]}{'...' if len(global_welcome) > 100 else ''}"
+        
+        await query.message.edit_text(tip_text)
+        return
+    
+    # 管理员清除全局欢迎语
+    if data == "admin_clear_global_welcome":
+        if not is_admin(query.from_user.id):
+            await reply_and_auto_delete(query.message, "⚠️ 无权限访问", delay=5)
+            return
+        
+        if db.delete_global_welcome():
+            await query.message.edit_text(
+                "✅ 已清除全局欢迎语\n\n所有机器人将使用系统默认欢迎语（除非已自定义）",
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 返回", callback_data="back_home")]])
+            )
+        else:
+            await query.message.edit_text(
+                "⚠️ 清除失败或全局欢迎语不存在",
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 返回", callback_data="back_home")]])
+            )
         return
 
     if data.startswith("del_"):
@@ -2041,19 +2317,29 @@ async def run_all_bots():
                 await app.initialize()
                 await app.start()
                 
-                # 设置子机器人的命令菜单
+                # 设置子机器人的命令菜单（仅对绑定用户显示）
                 try:
-                    commands = [
-                        BotCommand("start", "开始使用"),
-                        BotCommand("id", "查看用户"),
-                        BotCommand("b", "拉黑用户"),
-                        BotCommand("ub", "解除拉黑"),
-                        BotCommand("bl", "查看黑名单"),
-                        BotCommand("uv", "取消用户验证")
-                    ]
-                    await app.bot.set_my_commands(commands)
+                    # 先清除所有默认命令（全局）
+                    await app.bot.delete_my_commands()
+                    logger.info(f"✅ 已清除 @{bot_username} 的全局命令菜单")
+                    
+                    # 尝试为 owner 设置命令菜单（如果bot和owner还没对话会失败，这是正常的）
+                    try:
+                        commands = [
+                            BotCommand("start", "开始使用"),
+                            BotCommand("id", "查看用户"),
+                            BotCommand("b", "拉黑用户"),
+                            BotCommand("ub", "解除拉黑"),
+                            BotCommand("bl", "查看黑名单"),
+                            BotCommand("uv", "取消用户验证")
+                        ]
+                        await app.bot.set_my_commands(commands, scope=BotCommandScopeChat(chat_id=int(owner_id)))
+                        logger.info(f"✅ 已为 @{bot_username} 的拥有者（ID: {owner_id}）设置专属命令菜单")
+                    except Exception as scope_err:
+                        # Bot还没和owner对话过，等用户首次/start后会自动设置
+                        logger.info(f"ℹ️  @{bot_username} 暂未与拥有者建立对话，将在首次对话时设置命令菜单")
                 except Exception as cmd_err:
-                    logger.error(f"设置命令菜单失败 @{bot_username}: {cmd_err}")
+                    logger.error(f"❌ 设置命令菜单失败 @{bot_username}: {cmd_err}")
                 
                 await app.updater.start_polling()
                 logger.info(f"启动子Bot: @{bot_username}")
@@ -2063,6 +2349,52 @@ async def run_all_bots():
     # 管理 Bot
     manager_app = Application.builder().token(MANAGER_TOKEN).build()
     manager_app.add_handler(CommandHandler("start", manager_start))
+    # 添加欢迎语设置相关的命令处理器
+    async def handle_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """处理/cancel命令"""
+        action = context.user_data.get("action")
+        if action in ["set_welcome", "set_global_welcome"]:
+            context.user_data.pop("action", None)
+            context.user_data.pop("bot_username", None)
+            await update.message.reply_text("❌ 已取消设置")
+        else:
+            await update.message.reply_text("⚠️ 当前没有进行中的设置操作")
+    
+    async def handle_clear(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """处理/clear命令"""
+        action = context.user_data.get("action")
+        if action == "set_welcome":
+            bot_username = context.user_data.get("bot_username")
+            owner_id = str(update.message.chat.id)
+            
+            # 验证权限
+            bots = bots_data.get(owner_id, {}).get("bots", [])
+            target_bot = next((b for b in bots if b["bot_username"] == bot_username), None)
+            if not target_bot:
+                await update.message.reply_text("⚠️ 找不到这个 Bot")
+                context.user_data.pop("action", None)
+                context.user_data.pop("bot_username", None)
+                return
+            
+            # 清除自定义欢迎语
+            if db.update_bot_welcome(bot_username, ""):
+                # 更新内存
+                target_bot["welcome_msg"] = ""
+                load_bots()
+                await update.message.reply_text(
+                    f"✅ 已清除 @{bot_username} 的自定义欢迎语\n\n"
+                    f"现在将使用{'管理员全局欢迎语' if db.get_global_welcome() else '系统默认欢迎语'}"
+                )
+            else:
+                await update.message.reply_text("❌ 清除失败")
+            
+            context.user_data.pop("action", None)
+            context.user_data.pop("bot_username", None)
+        else:
+            await update.message.reply_text("⚠️ 请先进入欢迎语设置模式")
+    
+    manager_app.add_handler(CommandHandler("cancel", handle_cancel))
+    manager_app.add_handler(CommandHandler("clear", handle_clear))
     manager_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, token_listener))
     manager_app.add_handler(CallbackQueryHandler(callback_handler))
     running_apps["__manager__"] = manager_app
